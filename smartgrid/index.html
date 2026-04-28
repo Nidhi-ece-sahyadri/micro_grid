@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartGrid EMS</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#050a0e; --panel:#0a1520; --border:#0d2a3a;
+    --accent:#00e5ff; --green:#00ff88; --yellow:#ffcc00;
+    --red:#ff3d5a; --orange:#ff7e00; --text:#c8e6f0; --dim:#4a7080;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Exo 2',sans-serif; min-height:100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 20%,rgba(0,80,120,.15) 0%,transparent 60%),
+      radial-gradient(ellipse at 80% 80%,rgba(0,40,80,.2) 0%,transparent 60%);
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 28px; border-bottom:1px solid var(--border);
+    background:rgba(10,21,32,.9); backdrop-filter:blur(10px);
+    position:sticky; top:0; z-index:100;
+  }
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-icon{
+    width:36px;height:36px;
+    background:linear-gradient(135deg,var(--accent),#0080ff);
+    clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    display:flex;align-items:center;justify-content:center;font-size:16px;
+  }
+  .logo-text{font-size:1.1rem;font-weight:800;letter-spacing:2px;color:var(--accent);}
+  .logo-sub{font-size:.65rem;color:var(--dim);letter-spacing:3px;font-family:'Share Tech Mono';}
+  .status-bar{display:flex;gap:20px;align-items:center;}
+  .uptime{font-family:'Share Tech Mono';font-size:.75rem;color:var(--dim);}
+  #dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--red);transition:background .3s;
+  }
+  #dot.on{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+  #modeBanner{
+    margin:16px 24px 0;padding:14px 24px;border-radius:8px;
+    border:1px solid var(--border);display:flex;
+    align-items:center;justify-content:space-between;
+    transition:all .5s;font-weight:600;letter-spacing:1px;
+  }
+  .mode-sunny {background:rgba(0,255,136,.07);border-color:var(--green)!important;color:var(--green);}
+  .mode-cloudy{background:rgba(255,204,0,.07);border-color:var(--yellow)!important;color:var(--yellow);}
+  .mode-rainy {background:rgba(255,61,90,.07);border-color:var(--red)!important;color:var(--red);}
+  .mode-fault {background:rgba(255,126,0,.1);border-color:var(--orange)!important;color:var(--orange);}
+  .forecast-tag{
+    font-family:'Share Tech Mono';font-size:.75rem;
+    padding:4px 12px;border-radius:4px;
+    background:rgba(255,255,255,.05);letter-spacing:2px;
+  }
+  .grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:16px;padding:20px 24px;
+  }
+  .grid-wide{
+    display:grid;grid-template-columns:1fr 1fr;
+    gap:16px;padding:0 24px 20px;
+  }
+  .panel{
+    background:var(--panel);border:1px solid var(--border);
+    border-radius:10px;padding:20px;position:relative;overflow:hidden;
+    transition:border-color .3s;
+  }
+  .panel::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    opacity:.4;
+  }
+  .panel:hover{border-color:rgba(0,229,255,.3);}
+  .panel-title{
+    font-size:.65rem;letter-spacing:3px;text-transform:uppercase;
+    color:var(--dim);margin-bottom:16px;font-family:'Share Tech Mono';
+  }
+  .big-metric{display:flex;align-items:baseline;gap:6px;margin-bottom:4px;}
+  .big-value{
+    font-size:2.4rem;font-weight:800;font-family:'Share Tech Mono';
+    color:var(--accent);line-height:1;transition:color .3s;
+  }
+  .big-unit{font-size:.9rem;color:var(--dim);font-weight:300;}
+  .metric-label{font-size:.75rem;color:var(--dim);margin-top:4px;}
+  .metric-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);
+  }
+  .metric-row:last-child{border-bottom:none;}
+  .metric-name{font-size:.8rem;color:var(--dim);}
+  .metric-val{font-family:'Share Tech Mono';font-size:.9rem;font-weight:600;}
+  .progress-wrap{margin-top:12px;}
+  .progress-label{
+    display:flex;justify-content:space-between;
+    font-size:.72rem;color:var(--dim);margin-bottom:6px;
+    font-family:'Share Tech Mono';
+  }
+  .progress-track{height:6px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden;}
+  .progress-fill{height:100%;border-radius:3px;transition:width .8s,background .3s;}
+  .loads-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;}
+  .load-card{
+    background:rgba(255,255,255,.03);border:1px solid var(--border);
+    border-radius:8px;padding:14px;text-align:center;transition:all .3s;
+  }
+  .load-card.active{
+    border-color:rgba(0,255,136,.4);background:rgba(0,255,136,.05);
+    box-shadow:0 0 15px rgba(0,255,136,.1);
+  }
+  .load-card.solar-src{border-color:rgba(0,229,255,.4);background:rgba(0,229,255,.05);}
+  .load-icon{font-size:1.8rem;margin-bottom:8px;}
+  .load-name{font-size:.7rem;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+  .load-status{font-family:'Share Tech Mono';font-size:.8rem;font-weight:600;}
+  .load-source{font-size:.65rem;color:var(--dim);margin-top:4px;}
+  .source-wrap{display:flex;gap:16px;align-items:center;margin-top:8px;}
+  .donut-wrap{position:relative;width:80px;height:80px;flex-shrink:0;}
+  .donut-wrap canvas{width:80px!important;height:80px!important;}
+  .donut-label{
+    position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    font-family:'Share Tech Mono';font-size:.75rem;text-align:center;line-height:1.2;
+  }
+  .source-stats{flex:1;}
+  .source-row{margin-bottom:8px;}
+  .source-name{font-size:.7rem;color:var(--dim);margin-bottom:4px;}
+  .source-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden;}
+  .sfill-solar{background:linear-gradient(90deg,var(--accent),var(--green));height:100%;transition:width .8s;}
+  .sfill-batt{background:linear-gradient(90deg,var(--yellow),var(--orange));height:100%;transition:width .8s;}
+  #faultAlert{
+    margin:0 24px 16px;padding:12px 20px;
+    background:rgba(255,126,0,.1);border:1px solid var(--orange);
+    border-radius:8px;color:var(--orange);font-size:.85rem;
+    display:none;animation:flashBorder 1s infinite;
+  }
+  @keyframes flashBorder{0%,100%{border-color:var(--orange);}50%{border-color:transparent;}}
+  .chart-wrap{height:180px;position:relative;}
+  .eff-bar-wrap{height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;margin-top:10px;}
+  .eff-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--red),var(--yellow),var(--green));transition:width .8s;}
+
+  /* ESP32 IP input */
+  #ipForm{
+    margin:12px 24px 0;padding:10px 16px;
+    background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.2);
+    border-radius:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  #ipForm label{font-size:.75rem;color:var(--dim);font-family:'Share Tech Mono';}
+  #ipInput{
+    background:rgba(0,0,0,.3);border:1px solid var(--border);
+    border-radius:4px;padding:6px 12px;color:var(--text);
+    font-family:'Share Tech Mono';font-size:.85rem;width:200px;
+  }
+  #connectBtn{
+    padding:6px 16px;background:var(--accent);color:#000;
+    border:none;border-radius:4px;cursor:pointer;
+    font-family:'Share Tech Mono';font-size:.8rem;font-weight:700;
+  }
+  #connectBtn:hover{background:var(--green);}
+  #wsStatus{font-size:.75rem;font-family:'Share Tech Mono';}
+
+  @media(max-width:700px){
+    .grid-wide{grid-template-columns:1fr;}
+    header{padding:12px 16px;}
+    .grid,.grid-wide{padding:12px 16px;}
+    #modeBanner,#faultAlert,#ipForm{margin-left:16px;margin-right:16px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div>
+      <div class="logo-text">SMARTGRID EMS</div>
+      <div class="logo-sub">MICROGRID ENERGY MANAGEMENT</div>
+    </div>
+  </div>
+  <div class="status-bar">
+    <div class="uptime" id="uptimeEl">UPTIME: --:--:--</div>
+    <div id="dot"></div>
+  </div>
+</header>
+
+<!-- ESP32 IP Input -->
+<div id="ipForm">
+  <label>ESP32 IP ADDRESS:</label>
+  <input id="ipInput" type="text" placeholder="192.168.x.x" />
+  <button id="connectBtn" onclick="connectWS()">CONNECT</button>
+  <span id="wsStatus" style="color:var(--red)">● DISCONNECTED</span>
+</div>
+
+<div id="modeBanner" class="mode-sunny">
+  <span id="modeText">☀ SUNNY MODE — SOLAR ACTIVE</span>
+  <span class="forecast-tag" id="forecastText">STABLE</span>
+</div>
+
+<div id="faultAlert" role="alert">
+  ⚠ <span id="faultMsgEl">Fault detected</span>
+</div>
+
+<!-- Row 1 -->
+<div class="grid">
+
+  <div class="panel">
+    <div class="panel-title">☀ Solar Generation</div>
+    <div class="big-metric">
+      <span class="big-value" id="solarW">0.00</span>
+      <span class="big-unit">W</span>
+    </div>
+    <div class="metric-label">Instantaneous Power</div>
+    <div class="progress-wrap" style="margin-top:16px">
+      <div class="progress-label"><span>VOLTAGE</span><span id="solarVLbl">0.00 V</span></div>
+      <div class="progress-track"><div class="progress-fill" id="solarVBar" style="width:0%;background:linear-gradient(90deg,var(--accent),var(--green))"></div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label"><span>CURRENT</span><span id="solarALbl">0.000 A</span></div>
+      <div class="progress-track"><div class="progress-fill" id="solarABar" style="width:0%;background:linear-gradient(90deg,#0080ff,var(--accent))"></div></div>
+    </div>
+    <div class="metric-row" style="margin-top:8px">
+      <span class="metric-name">Energy Today</span>
+      <span class="metric-val" id="energyWh" style="color:var(--green)">0.000 Wh</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">🔋 Battery Bank</div>
+    <div class="big-metric">
+      <span class="big-value" id="battSoc" style="color:var(--green)">--</span>
+      <span class="big-unit">%</span>
+    </div>
+    <div class="metric-label">State of Charge</div>
+    <div class="progress-wrap" style="margin-top:16px">
+      <div class="progress-label"><span>SOC LEVEL</span><span id="battSocLbl">--%</span></div>
+      <div class="progress-track"><div class="progress-fill" id="battSocBar" style="width:0%"></div></div>
+    </div>
+    <div class="metric-row" style="margin-top:8px">
+      <span class="metric-name">Voltage</span>
+      <span class="metric-val" id="battV">-- V</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-name">Est. Time Remaining</span>
+      <span class="metric-val" id="battTime" style="color:var(--yellow)">-- hrs</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">🌡 Environment</div>
+    <div class="big-metric">
+      <span class="big-value" id="tempVal" style="color:var(--yellow)">--</span>
+      <span class="big-unit">°C</span>
+    </div>
+    <div class="metric-label">Ambient Temperature</div>
+    <div class="metric-row" style="margin-top:12px">
+      <span class="metric-name">Humidity</span>
+      <span class="metric-val" id="humidVal">-- %</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-name">Sunlight (LDR)</span>
+      <span class="metric-val" id="ldrVal">--</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-name">Panel Efficiency</span>
+      <span class="metric-val" id="effVal" style="color:var(--green)">-- %</span>
+    </div>
+    <div class="eff-bar-wrap">
+      <div class="eff-bar" id="effBar" style="width:0%"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Row 2 -->
+<div class="grid-wide">
+  <div class="panel">
+    <div class="panel-title">⚡ Load Management</div>
+    <div class="loads-grid">
+      <div class="load-card active solar-src" id="ledCard">
+        <div class="load-icon">💡</div>
+        <div class="load-name">LED Load</div>
+        <div class="load-status" id="ledStatus" style="color:var(--green)">ON</div>
+        <div class="load-source" id="ledSrc">Source: SOLAR</div>
+      </div>
+      <div class="load-card" id="fanCard">
+        <div class="load-icon">🌀</div>
+        <div class="load-name">Fan Load</div>
+        <div class="load-status" id="fanStatus" style="color:var(--red)">OFF</div>
+        <div class="load-source">12V Battery</div>
+      </div>
+    </div>
+    <div class="metric-row" style="margin-top:16px">
+      <span class="metric-name">Cloud Prediction</span>
+      <span class="metric-val" id="cloudPred" style="color:var(--green)">CLEAR</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-name">EMS Decision</span>
+      <span class="metric-val" id="emsDec" style="color:var(--accent)">MONITORING</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">⚖ Power Source Distribution</div>
+    <div class="source-wrap">
+      <div class="donut-wrap">
+        <canvas id="donutChart"></canvas>
+        <div class="donut-label">
+          <span id="donutLbl" style="color:var(--accent);font-weight:700">SOLAR</span>
+        </div>
+      </div>
+      <div class="source-stats">
+        <div class="source-row">
+          <div class="source-name">☀ SOLAR</div>
+          <div class="source-bar"><div class="sfill-solar" id="solarSrcBar" style="width:100%"></div></div>
+          <div style="font-family:'Share Tech Mono';font-size:.75rem;color:var(--accent);margin-top:3px" id="solarSrcPct">100%</div>
+        </div>
+        <div class="source-row">
+          <div class="source-name">🔋 BATTERY</div>
+          <div class="source-bar"><div class="sfill-batt" id="battSrcBar" style="width:0%"></div></div>
+          <div style="font-family:'Share Tech Mono';font-size:.75rem;color:var(--yellow);margin-top:3px" id="battSrcPct">0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 3 Charts -->
+<div class="grid-wide">
+  <div class="panel">
+    <div class="panel-title">📈 Solar Voltage History</div>
+    <div class="chart-wrap"><canvas id="voltChart"></canvas></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">⚡ Power Generation History</div>
+    <div class="chart-wrap"><canvas id="powerChart"></canvas></div>
+  </div>
+</div>
+
+<script>
+let ws, startTime = Date.now();
+let donut, vChart, pChart;
+
+/* ── Charts ── */
+const cOpts = {
+  responsive:true, maintainAspectRatio:false,
+  animation:{duration:300},
+  plugins:{legend:{display:false}},
+  scales:{
+    x:{display:false},
+    y:{grid:{color:'rgba(255,255,255,0.04)'},
+       ticks:{color:'#4a7080',font:{family:'Share Tech Mono',size:10}}}
+  }
+};
+
+vChart = new Chart(document.getElementById('voltChart'),{
+  type:'line',
+  data:{labels:Array(20).fill(''),datasets:[{
+    data:Array(20).fill(0),borderColor:'#00e5ff',borderWidth:2,
+    fill:true,backgroundColor:'rgba(0,229,255,0.06)',tension:0.4,pointRadius:0
+  }]},
+  options:{...cOpts,scales:{...cOpts.scales,y:{...cOpts.scales.y,min:0,max:7}}}
+});
+
+pChart = new Chart(document.getElementById('powerChart'),{
+  type:'line',
+  data:{labels:Array(20).fill(''),datasets:[{
+    data:Array(20).fill(0),borderColor:'#00ff88',borderWidth:2,
+    fill:true,backgroundColor:'rgba(0,255,136,0.06)',tension:0.4,pointRadius:0
+  }]},
+  options:{...cOpts,scales:{...cOpts.scales,y:{...cOpts.scales.y,min:0}}}
+});
+
+donut = new Chart(document.getElementById('donutChart'),{
+  type:'doughnut',
+  data:{datasets:[{
+    data:[100,0],
+    backgroundColor:['rgba(0,229,255,0.8)','rgba(255,204,0,0.8)'],
+    borderWidth:0,cutout:'70%'
+  }]},
+  options:{responsive:false,animation:{duration:500},plugins:{legend:{display:false}}}
+});
+
+/* ── WebSocket ── */
+function connectWS() {
+  let ip = document.getElementById('ipInput').value.trim();
+  if(!ip) { alert('Enter ESP32 IP address'); return; }
+  localStorage.setItem('esp32ip', ip);
+  if(ws) ws.close();
+  ws = new WebSocket('ws://' + ip + '/ws');
+  document.getElementById('wsStatus').textContent = '● CONNECTING...';
+  document.getElementById('wsStatus').style.color = 'var(--yellow)';
+  ws.onopen = () => {
+    document.getElementById('dot').className = 'on';
+    document.getElementById('wsStatus').textContent = '● CONNECTED';
+    document.getElementById('wsStatus').style.color = 'var(--green)';
+  };
+  ws.onclose = () => {
+    document.getElementById('dot').className = '';
+    document.getElementById('wsStatus').textContent = '● DISCONNECTED';
+    document.getElementById('wsStatus').style.color = 'var(--red)';
+    setTimeout(() => connectWS(), 3000);
+  };
+  ws.onerror = () => {
+    document.getElementById('wsStatus').textContent = '● ERROR — check IP';
+    document.getElementById('wsStatus').style.color = 'var(--orange)';
+  };
+  ws.onmessage = e => update(JSON.parse(e.data));
+}
+
+/* Auto reconnect if IP saved */
+window.onload = () => {
+  let saved = localStorage.getItem('esp32ip');
+  if(saved) { document.getElementById('ipInput').value = saved; connectWS(); }
+};
+
+/* ── Update UI ── */
+function update(d) {
+  /* Solar */
+  document.getElementById('solarW').textContent    = d.solarW;
+  document.getElementById('solarVLbl').textContent = d.solarV + ' V';
+  document.getElementById('solarALbl').textContent = d.solarA + ' A';
+  document.getElementById('solarVBar').style.width = (parseFloat(d.solarV)/6*100)+'%';
+  document.getElementById('solarABar').style.width = Math.min(parseFloat(d.solarA)/0.5*100,100)+'%';
+  document.getElementById('energyWh').textContent  = d.energyWh + ' Wh';
+
+  /* Battery */
+  let soc = parseFloat(d.battSoc);
+  document.getElementById('battSoc').textContent     = d.battSoc;
+  document.getElementById('battSocLbl').textContent  = d.battSoc + '%';
+  document.getElementById('battV').textContent       = d.battV + ' V';
+  let sb = document.getElementById('battSocBar');
+  sb.style.width = soc+'%';
+  sb.style.background = soc>50?'var(--green)':soc>25?'var(--yellow)':'var(--red)';
+  document.getElementById('battSoc').style.color = soc>50?'var(--green)':soc>25?'var(--yellow)':'var(--red)';
+  document.getElementById('battTime').textContent = (soc/100*7.4/0.5).toFixed(1)+' hrs';
+
+  /* Environment */
+  document.getElementById('tempVal').textContent  = d.temp;
+  document.getElementById('humidVal').textContent = d.humidity + ' %';
+  document.getElementById('ldrVal').textContent   = d.ldr;
+  document.getElementById('effVal').textContent   = d.solarEff + ' %';
+  document.getElementById('effBar').style.width   = d.solarEff + '%';
+
+  /* Mode banner */
+  let banner = document.getElementById('modeBanner');
+  let modeEl = document.getElementById('modeText');
+  banner.className = '';
+  if(d.fault)              { banner.classList.add('mode-fault');  modeEl.textContent='⚠ FAULT DETECTED'; }
+  else if(d.mode==='SUNNY'){ banner.classList.add('mode-sunny');  modeEl.textContent='☀ SUNNY — SOLAR ACTIVE'; }
+  else if(d.mode==='CLOUDY'){ banner.classList.add('mode-cloudy'); modeEl.textContent='⛅ CLOUDY — PARTIAL SOLAR'; }
+  else                     { banner.classList.add('mode-rainy');  modeEl.textContent='🌧 RAINY — BATTERY BACKUP'; }
+  document.getElementById('forecastText').textContent = d.forecast;
+
+  /* Fault */
+  let fa = document.getElementById('faultAlert');
+  fa.style.display = d.fault ? 'block' : 'none';
+  if(d.fault) document.getElementById('faultMsgEl').textContent = d.faultMsg;
+
+  /* Loads */
+  let lc = document.getElementById('ledCard');
+  lc.className = 'load-card active'+(d.ledSource==='SOLAR'?' solar-src':'');
+  document.getElementById('ledStatus').textContent = 'ON';
+  document.getElementById('ledStatus').style.color = 'var(--green)';
+  document.getElementById('ledSrc').textContent = 'Source: '+d.ledSource;
+
+  let fc = document.getElementById('fanCard');
+  fc.className = 'load-card'+(d.fanStatus==='ON'?' active':'');
+  document.getElementById('fanStatus').textContent = d.fanStatus;
+  document.getElementById('fanStatus').style.color = d.fanStatus==='ON'?'var(--green)':'var(--red)';
+
+  /* Cloud */
+  let cp = document.getElementById('cloudPred');
+  cp.textContent  = d.cloudAlert ? '⚠ CLOUD APPROACHING' : 'CLEAR';
+  cp.style.color  = d.cloudAlert ? 'var(--yellow)' : 'var(--green)';
+
+  /* EMS */
+  let em = document.getElementById('emsDec');
+  if(d.fault)            { em.textContent='FAULT PROTECTION'; em.style.color='var(--orange)'; }
+  else if(d.cloudAlert)  { em.textContent='LOAD SHEDDING';    em.style.color='var(--yellow)'; }
+  else if(d.mode==='SUNNY'){ em.textContent='OPTIMAL SOLAR';  em.style.color='var(--green)'; }
+  else                   { em.textContent='BATTERY BACKUP';   em.style.color='var(--yellow)'; }
+
+  /* Source bars */
+  let sp=parseFloat(d.solarPct), bp=parseFloat(d.battPct);
+  document.getElementById('solarSrcBar').style.width = sp+'%';
+  document.getElementById('battSrcBar').style.width  = bp+'%';
+  document.getElementById('solarSrcPct').textContent = sp+'%';
+  document.getElementById('battSrcPct').textContent  = bp+'%';
+  donut.data.datasets[0].data = [sp,bp];
+  donut.update();
+  document.getElementById('donutLbl').textContent = sp>=bp?'SOLAR':'BATT';
+
+  /* Charts */
+  vChart.data.datasets[0].data = d.vHistory;
+  vChart.update();
+  pChart.data.datasets[0].data = d.pHistory;
+  pChart.update();
+}
+
+/* Uptime */
+setInterval(() => {
+  let s=Math.floor((Date.now()-startTime)/1000);
+  document.getElementById('uptimeEl').textContent =
+    'UPTIME: '+String(Math.floor(s/3600)).padStart(2,'0')+':'+
+    String(Math.floor((s%3600)/60)).padStart(2,'0')+':'+
+    String(s%60).padStart(2,'0');
+},1000);
+</script>
+</body>
+</html>
