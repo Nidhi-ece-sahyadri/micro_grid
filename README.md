@@ -3,6 +3,7 @@
 A real-time **solar microgrid monitoring and intelligent power switching system** built using ESP32.
 This project not only monitors energy but also **automatically manages power flow between solar and battery sources**, just like a real-world microgrid.
 
+
 ---
 
 ## 🌟 Key Feature (Core Concept)
@@ -10,19 +11,20 @@ This project not only monitors energy but also **automatically manages power flo
 ### 🔄 Automatic Power Source Switching (Microgrid Logic)
 
 This system is designed to mimic a **real-world smart microgrid**, where energy is managed efficiently between **solar panels and battery storage**.
-![Uploading image.png…]()
+
 
 ### ✅ How it Works:
 
 * 🌞 **When Solar Power is Sufficient:**
-<img width="575" height="1280" alt="image" src="https://github.com/user-attachments/assets/c5ec7a60-3eef-40f5-bef8-c06910590526" />
+<img width="573" height="974" alt="WhatsApp Image 2026-04-28 at 9 10 07 PM" src="https://github.com/user-attachments/assets/f132bf84-8fed-4f3a-87d6-fd905f43e705" />
 
   * Loads are powered directly from **solar energy**
   * Excess energy is **stored in the battery**
   * System operates in **SUNNY mode**
 
 * ☁️ **When Solar Power is Insufficient:**
-![Uploading image.png…]()
+<img width="575" height="1001" alt="WhatsApp Image 2026-04-28 at 7 34 05 PM" src="https://github.com/user-attachments/assets/2b6c4ce0-3a85-4729-8212-a37823de15ff" />
+
 
   * Loads automatically switch to **battery supply**
   * Ensures **uninterrupted power**
