@@ -71,34 +71,6 @@ This project acts as a **mini smart grid controller**.
 
 4. Dashboard displays everything in real-time
 
----
-
-## ⚙️ Energy Management Logic
-
-```cpp
-if (solarVoltage >= 4.5V)
-{
-    // Solar is sufficient
-    Mode = SUNNY;
-
-    // Loads powered by solar
-    LED → Solar
-
-    // Battery charging (conceptual)
-    Excess → Battery
-
-    Fan → ON
-}
-else
-{
-    // Solar insufficient
-    Mode = CLOUDY;
-
-    // Switch loads to battery
-    LED → Battery
-    Fan → ON
-}
-```
 
 ---
 
@@ -136,7 +108,6 @@ This feature makes your project:
 * 🔬 More than a monitoring system
 * ⚡ A **real energy management system**
 * 🏡 Similar to **home solar inverter systems**
-* 🎓 Ideal for **final year / research projects**
 
 ---
 
