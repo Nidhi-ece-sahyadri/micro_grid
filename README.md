@@ -10,16 +10,19 @@ This project not only monitors energy but also **automatically manages power flo
 ### 🔄 Automatic Power Source Switching (Microgrid Logic)
 
 This system is designed to mimic a **real-world smart microgrid**, where energy is managed efficiently between **solar panels and battery storage**.
+![Uploading image.png…]()
 
 ### ✅ How it Works:
 
 * 🌞 **When Solar Power is Sufficient:**
+<img width="575" height="1280" alt="image" src="https://github.com/user-attachments/assets/c5ec7a60-3eef-40f5-bef8-c06910590526" />
 
   * Loads are powered directly from **solar energy**
   * Excess energy is **stored in the battery**
   * System operates in **SUNNY mode**
 
 * ☁️ **When Solar Power is Insufficient:**
+![Uploading image.png…]()
 
   * Loads automatically switch to **battery supply**
   * Ensures **uninterrupted power**
